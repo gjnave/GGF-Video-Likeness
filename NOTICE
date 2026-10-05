@@ -1,0 +1,17 @@
+GGF Video Likeness — Get Going Fast, 2026. Working product name.
+
+Uses selected ComfyUI inference modules under their GPLv3 license.
+See vendor/comfy_core/LICENSE and vendor/comfy_core/SOURCE.md.
+
+Viggle Animate conditioning/windowed sampling is adapted from
+ComfyUI-Viggle-Animate-H3, preserved fork by bhardwajRahul, originally
+published by Saganaki22. Apache License 2.0.
+Commit: 6ae081af5b3175f99ef7cddebd5dfaf93390ab70.
+GGF modification: server progress notifications are replaced by a callback;
+there is no ComfyUI server in this app.
+
+The image worker is reused from the user's Floyd Headliner application.
+Model weights are not included and retain their separate licenses.
+
+MiniMax H3 is licensed under the MiniMax H3 Community License Agreement,
+Copyright © 2026 MiniMax. All Rights Reserved.

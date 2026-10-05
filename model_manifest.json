@@ -1,0 +1,15 @@
+{
+  "video": [
+    {"repo":"drbaph/Viggle-Animate-ComfyUI","revision":"cb3907d33a0ac57314135f86232fdaf4bdb23105","file":"diffusion_models/minimax_h3_ref2va_viggle_pruned_int8_convrot.safetensors","sha256":"c16db9a453461261b7270ed6fd9e435dde0524234ba4184253ba3876bc3d3540","size":21033720080},
+    {"repo":"drbaph/Viggle-Animate-ComfyUI","revision":"cb3907d33a0ac57314135f86232fdaf4bdb23105","file":"loras/viggle_animate_dmd_lora_r64.safetensors","sha256":"8dc50f293c50c9466ac0ae907fd9f904a9a56ceb81f727fb3df02fbadec54446","size":941893032},
+    {"repo":"drbaph/Viggle-Animate-ComfyUI","revision":"cb3907d33a0ac57314135f86232fdaf4bdb23105","file":"text_cond/fixed_embed_fwd_anyframe.safetensors","sha256":"86ae5987dda844cb80fa4d35d04dddc959f463d04259fbe727b41e80a07e0fde","size":3713456},
+    {"repo":"Kijai/MiniMax-H3-experimental","revision":"d8023be02fefbb3633b0cd335c3879f91177299d","file":"minimax_h3_video_vae_int8_convrot.safetensors","destination":"vae/minimax_h3_video_vae_int8_convrot.safetensors","sha256":"9bb2d96f218c76babd85e0611b85ca8fb330a90546c01a0005e8a58a59593410","size":3171670912}
+  ],
+  "image": [
+    {"repo":"Comfy-Org/Qwen-Image-2.1","revision":"eee52e917df0f00d910bc1f04f8a4d825dcef255","file":"diffusion_models/qwen_image_2.1_int8_convrot.safetensors","sha256":"cb74113cb03faecd79611b01fd7fd642f0aa60d6f0b95086abee214d75eaa57d","size":7256783064},
+    {"repo":"Comfy-Org/Qwen3-VL","revision":"056c1bacea04322faeab9d7c9edb8c3f24460023","file":"text_encoders/qwen3vl_8b_int8_convrot.safetensors","sha256":"8bfd0f6e12abf2d2d697ecc888e5e90b0d6741d6708f05799f53afa560452e8f","size":9350798360},
+    {"repo":"Comfy-Org/Qwen-Image-2.1","revision":"eee52e917df0f00d910bc1f04f8a4d825dcef255","file":"vae/qwen_image_2.1_vae_bf16.safetensors","sha256":"bb21f7473051e1ac368515dd3f2e15cd44d7a11748ee8823e1ddca3e4876b7c9","size":675509688},
+    {"repo":"Alissonerdx/BFS-Best-Face-Swap","revision":"0ca3913ade4b4ada458d60c232354e8586c4c181","file":"bfs_head_v1.1_alternative_qwen_2.1.safetensors","destination":"loras/bfs_head_v1.1_alternative_qwen_2.1.safetensors","sha256":"c5332bbc2f826856e7a09bce9740e97d39514b849368212e1f2c3c2c2d81c217","size":318821008},
+    {"repo":"Viggle/Qwen-Image-2.1-viggle-turbo","revision":"bb26a0f38e5fe6c124aaccc9187a87eed5d9ed13","file":"Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r256.safetensors","destination":"loras/Qwen-Image-2.1-viggle-turbo-v0.2.1-6step-lora-r256.safetensors","sha256":"2a0148f5c73abbed5f97da5ea356e439318aadb281d01fce4af39cdf43728803","size":1359147904}
+  ]
+}

@@ -1,0 +1,17 @@
+.venv/
+__pycache__/
+*.pyc
+models/
+outputs/
+jobs/
+logs/
+local_settings.json
+network_settings.json
+app.lock
+release-manifest.json
+*.partial
+*.bat
+*.zip
+vendor/comfy_core/input/
+vendor/comfy_core/output/
+vendor/comfy_core/temp/
