@@ -74,5 +74,7 @@ def generate(request, owner, progress):
         if process is not None and process.poll() is None:
             stop_process_tree(process)
             process.wait(timeout=15)
+        if process is not None and process.stdout is not None:
+            process.stdout.close()
         ACTIVE = None
         LOCK.release()

@@ -23,6 +23,7 @@ class CoreTests(unittest.TestCase):
         child=int(parent.stdout.readline())
         stop_process_tree(parent)
         parent.wait(timeout=10)
+        parent.stdout.close()
         self.assertFalse(psutil.pid_exists(child))
 
     def test_mask_has_no_color_or_pixels_outside_selection(self):
