@@ -4,6 +4,8 @@ import random
 import sys
 import time
 import traceback
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
@@ -92,7 +94,8 @@ def run(request):
         sigmas = torch.tensor([1., 6/7, .6, 0.])
         result, chunk_map = viggle.ViggleChunkedSampler().sample(guider, sampler, sigmas, cond_set, vae, seed, 0, 0)
     progress('Saving the result and restoring original audio')
-    output = job/'result.mp4'
+    stamp = datetime.now().strftime('%Y%m%d-%H%M%S')
+    output = job / f'Floyd-Headliner-Animate-{stamp}-{uuid.uuid4().hex[:6]}.mp4'
     save_video(result.cpu().numpy(), output, request['video'], request['start'], length, job/'silent.mp4')
     return dict(output=str(output), seed=seed, seconds=round(time.perf_counter()-started,2),
                 width=width, height=height, chunk_map=chunk_map,peak_vram_gib=round(torch.cuda.max_memory_allocated()/2**30,2))
