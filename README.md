@@ -1,6 +1,6 @@
-# GGF Video Likeness
+# Floyd Headliner Animate
 
-**A new look. The same performance.** Working name — a purpose-built Get Going Fast app.
+**A new look. The same performance.** A purpose-built Get Going Fast app.
 
 ## Get going fast
 
