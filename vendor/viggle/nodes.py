@@ -646,6 +646,11 @@ class ViggleChunkedSampler:
         chunk_noise = copy.copy(noise)  # never mutate the cached Noise object
         chunk_noise.seed = seed_i
         callback = latent_preview.prepare_callback(guider.model_patcher, sigmas.shape[-1] - 1)
+        preview_callback = callback
+        def callback(step, x0, x, total_steps):
+            if preview_callback is not None:
+                preview_callback(step, x0, x, total_steps)
+            _send_progress(None, f"Creating frames {a}-{b}: step {step + 1} of {total_steps}")
         disable_pbar = not comfy.utils.PROGRESS_BAR_ENABLED
         out = _chunk_guider(guider, cond).sample(
             chunk_noise.generate_noise(chunk_latent), samples, sampler, sigmas,

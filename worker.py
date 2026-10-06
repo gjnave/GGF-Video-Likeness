@@ -4,10 +4,15 @@ import random
 import sys
 import time
 import traceback
+import uuid
+from datetime import datetime
 from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent
 PROTOCOL = sys.stdout
+
+def video_filename():
+    return f'floyd-headliner-animate-{datetime.now():%Y%m%d-%H%M%S}-{uuid.uuid4().hex[:10]}.mp4'
 
 def progress(message):
     PROTOCOL.write('__GGF__' + json.dumps({'progress': str(message)}) + '\n')
@@ -47,7 +52,7 @@ def run(request):
         progress('Making the likeness preview — six sampling steps')
         result = engine.generate(dict(body_path=str(job/'working-frame.png'), head_path=request['reference'],
                                       output_dir=str(job), steps=6, resolution=request.get('image_resolution', 768),
-                                      upscale=1, seed=seed, extra_prompt=request.get('prompt', '')))
+                                      upscale=1, seed=seed, extra_prompt='Transfer the complete head identity, including face, ears, hair, hairline and the visible side and back of the head. Preserve the original head angle and pose. ' + request.get('prompt', '')))
         generated = Image.open(result['output']).convert('RGB').resize(body.size, Image.Resampling.LANCZOS)
         if box:
             # Overlay color never enters either model. Only the clean crop is edited.
@@ -73,9 +78,13 @@ def run(request):
         folder_paths.add_model_folder_path(kind, str(root/kind), is_default=True)
     progress('Preparing your selected video range at 24 fps')
     width, height, length = prepare_clip(request['video'], request['start'], request['duration'],
-                                         request['short_edge'], job/'driving.mkv')
+                                         request['short_edge'], job/'driving.mkv',request.get('shape','Match uploaded video'))
     frames = torch.from_numpy(load_frames(job/'driving.mkv')).float().div_(255)
     reference = load_image_tensor(request['preview'])
+    if request.get('shape','Match uploaded video') != 'Match uploaded video':
+        from PIL import ImageOps
+        fitted = ImageOps.pad(Image.open(request['preview']).convert('RGB'),(width,height),method=Image.Resampling.LANCZOS,color='black')
+        reference = torch.from_numpy(np.asarray(fitted).copy()).float().div_(255).unsqueeze(0)
     progress('Loading Viggle Animate and its three-step accelerator')
     model = nodes.UNETLoader().load_unet('minimax_h3_ref2va_viggle_pruned_int8_convrot.safetensors', 'default')[0]
     model = nodes.LoraLoaderModelOnly().load_lora_model_only(model, 'viggle_animate_dmd_lora_r64.safetensors', 1.0)[0]
@@ -92,7 +101,7 @@ def run(request):
         sigmas = torch.tensor([1., 6/7, .6, 0.])
         result, chunk_map = viggle.ViggleChunkedSampler().sample(guider, sampler, sigmas, cond_set, vae, seed, 0, 0)
     progress('Saving the result and restoring original audio')
-    output = job/'result.mp4'
+    output = job/video_filename()
     save_video(result.cpu().numpy(), output, request['video'], request['start'], length, job/'silent.mp4')
     return dict(output=str(output), seed=seed, seconds=round(time.perf_counter()-started,2),
                 width=width, height=height, chunk_map=chunk_map,peak_vram_gib=round(torch.cuda.max_memory_allocated()/2**30,2))

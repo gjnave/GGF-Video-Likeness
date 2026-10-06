@@ -20,4 +20,6 @@ Environment: Windows, RTX 4090 24 GB, Python 3.11, PyTorch 2.10.0+cu130, Gradio 
 
 ## Not established by these checks
 
+Workspace update: eight CPU tests pass, including saved media/approval/result restoration, browser isolation, and decoding different video frames with forward/backward stepping. Browser reload verified the uploaded video, prompt, captured timestamp and approval state. Whole-head blending now uses a feathered rectangular selection instead of an inscribed oval; no new GPU quality benchmark was run for this change.
+
 These examples do not prove identity tracking across crowded scenes, cuts, exits/re-entry, or arbitrary long videos. Multi-window output can drift. Smaller-GPU performance is not verified. Windows processing keeps the whole selected range in system RAM, so custom duration is not a promise of unlimited-length processing. Model-license clearance and public Drive source-fallback access are separate release requirements.

@@ -1,23 +1,29 @@
-# GGF Video Likeness
+# Floyd Headliner Animate
 
-**A new look. The same performance.** Working name — a purpose-built Get Going Fast app.
+**A new look. The same performance.** A purpose-built Get Going Fast app in the Floyd Headliner family.
 
 ## Get going fast
 
 Visit **[GetGoingFast.pro](https://getgoingfast.pro)** for GGF tools and setup helpers.
 Watch **[The AI Hobby Guy on YouTube](https://youtube.com/@TheAIHobbyGuy)** for practical local-AI demonstrations.
 
-Upload a video, capture a clear frame, select the person's head, and upload a replacement photo. The app uses Headliner's likeness-transfer engine behind the scenes. Review and approve that frame, then animate it through your chosen video range. No exporting between apps and no ComfyUI installation or server.
+Upload a video, capture a clear frame, select the person's head, and upload a replacement photo. The app uses Headliner's likeness-transfer engine behind the scenes. Review that frame, then animate it through your chosen video range. No exporting between apps and no ComfyUI installation or server.
 
 ## Simple workflow
 
 1. Upload a video. Play/pause and **Capture paused frame**, or enter an exact capture time.
-2. Click the target face. Adjust the gold oval to include the head and hair. Upload a clear replacement photo.
-3. **Make likeness preview**. Review it and tick **Use this preview**.
-4. Choose a start time and duration, then **Animate approved preview**.
+2. Click the center of the whole head. Adjust the gold box to include all hair, ears and the visible back of the head, leaving space for a new hairstyle. Upload a clear replacement photo.
+3. **Make likeness preview** and review it.
+4. Choose a start time and duration, then **Animate preview**.
 
 An already edited, full-size frame from Headliner or another editor can also be imported.
-Original audio is retained. Results are saved inside `jobs/<job-id>/`; the output player has download controls.
+Original audio is retained. Results are saved inside `jobs/<job-id>/`; each MP4 has a timestamp and unique suffix so downloads have different names. The taller output player has download and fullscreen controls. A persistent generation banner shows elapsed time and progress; the previous displayed video clears when a new generation starts, while saved files remain.
+
+Use the frame timeline or Previous/Next frame buttons to choose another reference moment. Entered-time capture and capturing the paused player are also available.
+
+Output shape defaults to the uploaded video's displayed orientation, including phone rotation metadata. The detected input and planned output dimensions are shown. Choose Portrait, Landscape or Square to override it; other shapes add padding instead of cropping or stretching the subject. The short-edge setting controls resolution independently of orientation.
+
+Your workspace is automatically saved on this computer and restored when the same browser reopens the same app address. It includes uploaded media, the selected frame, controls, approval and completed results. Keep browser site storage enabled. A new temporary public URL has separate browser storage, so it does not automatically identify your previous workspace. The saved files remain in `jobs/workspaces/`.
 
 ## Duration and quality
 

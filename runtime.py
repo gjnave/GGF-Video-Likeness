@@ -3,6 +3,8 @@ import json
 import subprocess
 import threading
 import uuid
+import time
+import workspace
 from pathlib import Path
 from config import ROOT, settings
 
@@ -43,7 +45,15 @@ def generate(request, owner, progress):
     if not LOCK.acquire(blocking=False):
         raise ValueError('Another generation is already running. Wait for it to finish.')
     process = None
+    started = time.time()
+    mode = request.get('mode','video')
+    activity = dict(running=True,started=started,mode=mode,stage='Starting generation')
+    updates = {'activity':activity}
+    if mode == 'video':
+        updates['output'] = None
+    failure = None
     try:
+        workspace.save(owner,**updates)
         job = job_directory()
         request = {**settings(), **request, 'job': str(job)}
         request_file = job/'request.json'
@@ -58,7 +68,13 @@ def generate(request, owner, progress):
                 if line.startswith('__GGF__'):
                     item = json.loads(line[len('__GGF__'):])
                     if 'progress' in item:
-                        progress(item['progress'])
+                        activity['stage'] = item['progress']
+                        workspace.save(owner,activity=activity)
+                        try:
+                            progress(item['progress'])
+                        except Exception:
+                            # Browser disconnects must not interrupt an owned job.
+                            pass
                     else:
                         result = item
             process.wait()
@@ -70,11 +86,18 @@ def generate(request, owner, progress):
                 raise RuntimeError(result['error'])
             (job/'result.json').write_text(json.dumps(result, indent=2))
             return result
+    except Exception as error:
+        failure = str(error)
+        raise
     finally:
         if process is not None and process.poll() is None:
             stop_process_tree(process)
             process.wait(timeout=15)
         if process is not None and process.stdout is not None:
             process.stdout.close()
-        ACTIVE = None
-        LOCK.release()
+        try:
+            activity.update(running=False,finished=time.time(),stage=failure or 'Generation complete',error=bool(failure))
+            workspace.save(owner,activity=activity)
+        finally:
+            ACTIVE = None
+            LOCK.release()

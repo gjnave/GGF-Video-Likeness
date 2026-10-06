@@ -1,10 +1,11 @@
-# GGF Video Likeness — working product name
+# Floyd Headliner Animate
 
 - This is a separate app. Do not modify Headliner or Spokesman to develop it.
 - Never delete files or folders without the user's explicit permission.
 - Use the existing GGF navy/gold styling, readable dark dropdowns and compact mobile header.
-- The primary flow is video → capture frame → select person → likeness preview → approval → animation.
-- Keep clean image pixels separate from selection overlays. Changing selection/reference must invalidate approval.
+- The primary flow is video → capture frame → select person → likeness preview → animation. There is no approval checkbox.
+- Keep clean image pixels separate from selection overlays. Changing selection/reference must invalidate the preview.
+- Preserve existing repository addresses and installation folder names for updater compatibility; visible product branding is Floyd Headliner Animate.
 - Use app-local Comfy inference modules in an owned worker. No ComfyUI server, frontend or external installation.
 - Never run both model stages simultaneously. Preserve inputs and previous outputs on errors/cancellation.
 - Five seconds is a suggested first test, not a total-duration limit. Preserve original audio.
