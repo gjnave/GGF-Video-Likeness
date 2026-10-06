@@ -1,4 +1,4 @@
-"""GGF Video Likeness — capture, preview, animate in one purpose-built UI."""
+"""Floyd Headliner Animate — capture, preview, animate in one purpose-built UI."""
 import base64
 import copy
 import json
@@ -19,7 +19,7 @@ REVISIONS = {}
 CSS = (ROOT/'style.css').read_text()
 LOGO = base64.b64encode((ROOT/'assets'/'ggf-brain-logo.png').read_bytes()).decode()
 HEADER = f'''<div class="ggf-hero"><div><div class="ggf-eyebrow">GET GOING FAST · LOCAL AI</div>
-<h1>GGF Video Likeness</h1><p>A new look. The same performance.</p>
+<h1>Floyd Headliner Animate</h1><p>A new look. The same performance.</p>
 <div class="ggf-links"><a href="https://getgoingfast.pro" target="_blank">GetGoingFast.pro ↗</a>
 <a href="https://youtube.com/@TheAIHobbyGuy" target="_blank">The AI Hobby Guy ↗</a></div></div>
 <img src="data:image/png;base64,{LOGO}" alt="Get Going Fast"></div>'''
@@ -128,7 +128,7 @@ def save_access(mode, username, password):
     return 'Saved. Close and reopen the app to apply. Local access stays available without login. ' + ('Remote login enabled.' if saved['digest'] else 'Remote login is OFF; anyone with the link can use the app.')
 
 def build_demo():
-    with gr.Blocks(title='GGF Video Likeness') as demo:
+    with gr.Blocks(title='Floyd Headliner Animate') as demo:
         state = gr.State(fresh_state)
         gr.HTML(HEADER)
         with gr.Tabs():
