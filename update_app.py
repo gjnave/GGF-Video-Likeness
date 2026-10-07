@@ -1,131 +1,183 @@
-"""Source-only updater. Verified staging, backups, three mirrors, no deletions."""
+"""Git source updates; no manually maintained source ZIP."""
 import argparse
-import hashlib
-import json
 import os
+from pathlib import Path
 import shutil
 import subprocess
+import sys
+import tempfile
 import time
-import uuid
-import zipfile
-from pathlib import Path
-import requests
-from packaging.version import Version
 
 ROOT = Path(__file__).resolve().parent
-DRIVE_ID = '1G_h82Vp0eqnGwQdTj6vMXI6dd8QvT2IL'
 MIRRORS = [
-    ('Codeberg','https://codeberg.org/Cognibuild/GGF-Video-Likeness/raw/branch/main/GGF-Video-Likeness-source.zip'),
-    ('GitHub','https://github.com/gjnave/GGF-Video-Likeness/archive/refs/heads/main.zip'),
+    ('Codeberg', 'https://codeberg.org/Cognibuild/Headliner-Animate.git'),
+    ('GitHub', 'https://github.com/gjnave/Headliner-Animate.git'),
 ]
-VERSIONS = [
-    'https://codeberg.org/Cognibuild/GGF-Video-Likeness/raw/branch/main/VERSION',
-    'https://raw.githubusercontent.com/gjnave/GGF-Video-Likeness/main/VERSION',
-]
-PRIVATE = {'models','outputs','jobs','logs','.venv','.git','local_settings.json','network_settings.json','app.lock'}
+PRIVATE = {'models', 'outputs', 'jobs', 'logs', '.venv', '.git',
+           'local_settings.json', 'network_settings.json', 'app.lock'}
 
-def latest_version():
-    versions=[]
-    for url in VERSIONS:
-        try:
-            response=requests.get(url,timeout=8,headers={'Cache-Control':'no-cache'})
-            response.raise_for_status()
-            latest=response.text.strip()
-            versions.append(Version(latest))
-        except Exception:
-            pass
-    return max(versions) if versions else None
-
-def check_update():
-    current = (ROOT/'VERSION').read_text().strip()
-    latest=latest_version()
-    if latest is None:
-        return 'Update servers could not be reached. Nothing changed; try again later.'
-    if latest>Version(current):
-        return f'**Update available: {latest}.** Close the app and run **UPDATE.bat**. Your models, settings and videos will be kept.'
-    return f'You are up to date: {current}.'
+def git(root, *args):
+    env = dict(os.environ, GIT_TERMINAL_PROMPT='0', GCM_INTERACTIVE='never')
+    result = subprocess.run(['git', '-C', str(root), *args], env=env,
+                            capture_output=True, text=True, timeout=180)
+    if result.returncode:
+        raise RuntimeError(result.stderr.strip() or 'Git command failed.')
+    return result.stdout.strip()
 
 def safe_name(value):
-    path=Path(value)
-    return bool(value) and not path.is_absolute() and '..' not in path.parts and ':' not in value and not value.startswith(('\\','/')) and not any(part in PRIVATE for part in path.parts)
+    parts = value.replace('\\', '/').split('/')
+    return bool(value) and not value.startswith(('/', '\\')) and ':' not in value and not any(p in PRIVATE or p == '..' for p in parts)
 
-def stage_archive(archive, stage):
-    with zipfile.ZipFile(archive) as z:
-        manifests=[n for n in z.namelist() if n.endswith('release-manifest.json') and n.count('/')<=1]
-        if len(manifests)!=1:
-            raise ValueError('Archive does not contain exactly one release manifest.')
-        manifest_name=manifests[0]
-        prefix=manifest_name[:-len('release-manifest.json')]
-        manifest=json.loads(z.read(manifest_name))
-        files=manifest['files']
-        if not {'app.py','VERSION','worker.py','requirements.txt','update_app.py'}.issubset(files):
-            raise ValueError('Source archive is incomplete.')
-        for name,digest in files.items():
-            if not safe_name(name):
-                raise ValueError('Unsafe or private path in source archive.')
-            data=z.read(prefix+name)
-            if hashlib.sha256(data).hexdigest()!=digest:
-                raise ValueError('Source checksum mismatch: '+name)
-            target=stage/name
-            target.parent.mkdir(parents=True,exist_ok=True)
-            target.write_bytes(data)
-        (stage/'release-manifest.json').write_text(json.dumps(manifest,indent=2))
-        return manifest
+def remote_head(root=ROOT):
+    errors = []
+    for name, url in MIRRORS:
+        try:
+            result = git(root, 'ls-remote', url, 'refs/heads/main')
+            if not result:
+                raise RuntimeError('No main branch found.')
+            return name, url, result.split()[0]
+        except (OSError, RuntimeError, subprocess.TimeoutExpired) as error:
+            errors.append(f'{name}: {error}')
+    raise RuntimeError('Cannot reach the source repositories. Nothing changed. ' + '; '.join(errors))
 
-def update(archive=None):
-    lock=ROOT/'app.lock'
-    if lock.exists():
-        import psutil
+def check_update(root=ROOT):
+    try:
+        if not (root / '.git').exists():
+            remote_head(root)
+            return 'Git updates are available. Click Update and restart to connect this installation; models and settings are kept.'
+        current = git(root, 'rev-parse', 'HEAD')
+        errors = []
+        for name, url in MIRRORS:
+            try:
+                git(root, 'fetch', '--no-tags', url, 'main')
+                commit = git(root, 'rev-parse', 'FETCH_HEAD')
+                if current == commit:
+                    return f'You are up to date ({current[:8]}, {name}).'
+                git(root, 'merge-base', '--is-ancestor', current, commit)
+                return f'**Update available ({commit[:8]}, {name}).** Click Update and restart. Models, settings and videos are kept.'
+            except Exception as error:
+                errors.append(f'{name}: {error}')
+        return 'No compatible newer revision could be verified. Your local branch may be ahead or diverged, or the mirrors may be unavailable. Nothing changed. ' + '; '.join(errors)
+    except Exception as error:
+        return str(error)
+
+def update(root=ROOT):
+    root = Path(root).resolve()
+    if (root / '.git').exists():
+        if git(root, 'status', '--porcelain', '--untracked-files=no'):
+            raise RuntimeError('Local source changes exist. Commit or back them up before updating; nothing was overwritten.')
+        if git(root, 'branch', '--show-current') != 'main':
+            raise RuntimeError('Automatic updates require the main branch. Your checkout was not changed.')
+        errors = []
+        for name, url in MIRRORS:
+            try:
+                git(root, 'fetch', '--no-tags', url, 'main')
+                target = git(root, 'rev-parse', 'FETCH_HEAD')
+                git(root, 'merge-base', '--is-ancestor', 'HEAD', target)
+                break
+            except Exception as error:
+                errors.append(f'{name}: {error}')
+        else:
+            raise RuntimeError('No compatible update found. Local source preserved. ' + '; '.join(errors))
+        if git(root, 'rev-parse', 'HEAD') == target:
+            return target
+        backup = root.parent / 'app-backups' / time.strftime('%Y%m%d-%H%M%S')
+        backup.mkdir(parents=True, exist_ok=True)
+        git(root, 'bundle', 'create', str(backup / 'source.bundle'), '--all')
+        git(root, 'merge', '--ff-only', target)
+        return target
+    # One-time migration of old installed copies to a normal Git checkout.
+    stage = Path(tempfile.mkdtemp(prefix='headliner-git-'))
+    errors = []
+    for index, (name, url) in enumerate(MIRRORS):
+        candidate = stage / str(index)
         try:
-            pid=int(lock.read_text())
-            process=psutil.Process(pid)
-            if any(str(ROOT).lower() in s.lower() for s in process.cmdline()):
-                raise RuntimeError('Close this app before running UPDATE.bat.')
-        except (psutil.NoSuchProcess,ValueError):
-            pass
-    work=ROOT.parent/'update-cache'/uuid.uuid4().hex
-    work.mkdir(parents=True)
-    choices=[('Local archive',str(archive))] if archive else MIRRORS + ([('Google Drive',f'https://drive.usercontent.google.com/download?id={DRIVE_ID}&export=download&confirm=t')] if DRIVE_ID else [])
-    expected=latest_version() if not archive else None
-    failures=[]
-    for source,url in choices:
-        try:
-            candidate=Path(url) if archive else work/(source.replace(' ','-')+'.zip')
-            if not archive:
-                subprocess.run(['curl.exe','-fL','--connect-timeout','15','--max-time','240','--retry','2','-o',str(candidate),url],check=True)
-            stage=work/source.replace(' ','-')
-            manifest=stage_archive(candidate,stage)
-            current=Version((ROOT/'VERSION').read_text().strip()) if (ROOT/'VERSION').exists() else Version('0')
-            incoming=Version((stage/'VERSION').read_text().strip())
-            if incoming<current:
-                raise ValueError('Mirror is older than your installed version; refusing downgrade.')
-            if expected is not None and incoming<expected:
-                raise ValueError('Mirror is behind another published source; trying the next source.')
+            git(stage, 'clone', '--branch', 'main', '--single-branch', url, str(candidate))
+            files = [item for item in git(candidate, 'ls-files', '-z').split('\0') if item]
+            if not {'app.py', 'update_app.py', 'requirements.txt', 'worker.py'}.issubset(files):
+                raise RuntimeError('Repository does not contain the full app source.')
+            if any(not safe_name(item) or (candidate / item).is_symlink() for item in files):
+                raise RuntimeError('Repository contains a protected or unsafe path.')
             break
         except Exception as error:
-            failures.append(f'{source}: {error}')
+            errors.append(f'{name}: {error}')
     else:
-        raise RuntimeError('No usable source mirror. Existing app preserved.\n'+'\n'.join(failures))
-    backup=ROOT.parent/'app-backups'/time.strftime('%Y%m%d-%H%M%S')
-    for name in list(manifest['files'])+['release-manifest.json']:
-        target=ROOT/name
+        raise RuntimeError('No usable source repository. Existing files preserved. ' + '; '.join(errors))
+    backup = root.parent / 'app-backups' / time.strftime('%Y%m%d-%H%M%S')
+    for item in files:
+        target = root / item
         if target.exists():
-            saved=backup/name
-            saved.parent.mkdir(parents=True,exist_ok=True)
-            shutil.copy2(target,saved)
-    for name in list(manifest['files'])+['release-manifest.json']:
-        target=ROOT/name
-        target.parent.mkdir(parents=True,exist_ok=True)
-        shutil.copy2(stage/name,target)
-    print(f'Updated from {source} to {incoming}. Existing source backup: {backup}')
-    return str(incoming)
+            saved = backup / item
+            saved.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(target, saved)
+    for item in files:
+        target = root / item
+        target.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(candidate / item, target)
+    shutil.copytree(candidate / '.git', root / '.git')
+    return git(root, 'rev-parse', 'HEAD')
 
-if __name__=='__main__':
-    p=argparse.ArgumentParser()
-    p.add_argument('--archive',type=Path)
-    p.add_argument('--check',action='store_true')
-    args=p.parse_args()
+def start_restart(root=ROOT):
+    """Copy helper outside the source tree so updating cannot disrupt it."""
+    import psutil
+    remote_head(root)  # Fail before closing the original app.
+    folder = Path(tempfile.mkdtemp(prefix='headliner-restart-'))
+    helper = folder / 'update_app.py'
+    shutil.copy2(Path(__file__), helper)
+    log = root / 'logs' / 'update.log'
+    log.parent.mkdir(exist_ok=True)
+    command = [sys.executable, str(helper), '--root', str(root), '--restart',
+               str(os.getpid()), str(psutil.Process().create_time())]
+    flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+    with log.open('a', encoding='utf-8') as stream:
+        subprocess.Popen(command, cwd=root, stdin=subprocess.DEVNULL,
+                         stdout=stream, stderr=stream, creationflags=flags)
+
+def main():
+    parser = argparse.ArgumentParser()
+    parser.add_argument('--root', type=Path, default=ROOT)
+    parser.add_argument('--check', action='store_true')
+    parser.add_argument('--restart', nargs=2, metavar=('PID', 'CREATED'))
+    args = parser.parse_args()
+    root = args.root.resolve()
     if args.check:
-        print(check_update())
+        print(check_update(root))
+        return
+    import psutil
+    if args.restart:
+        pid, created = int(args.restart[0]), float(args.restart[1])
+        deadline = time.monotonic() + 45
+        while psutil.pid_exists(pid):
+            try:
+                if psutil.Process(pid).create_time() != created:
+                    break
+            except psutil.NoSuchProcess:
+                break
+            if time.monotonic() > deadline:
+                raise RuntimeError('App did not close; update cancelled.')
+            time.sleep(.5)
     else:
-        update(args.archive)
+        lock = root / 'app.lock'
+        if lock.exists():
+            try:
+                process = psutil.Process(int(lock.read_text()))
+                if any(str(root).lower() in arg.lower() for arg in process.cmdline()):
+                    raise RuntimeError('Close this app first, or use Update and restart in Settings.')
+            except (ValueError, psutil.NoSuchProcess):
+                pass
+    try:
+        before = (root / 'requirements.txt').read_bytes()
+        commit = update(root)
+        if before != (root / 'requirements.txt').read_bytes():
+            subprocess.run([sys.executable, '-m', 'pip', 'install', '-r', str(root / 'requirements.txt')], check=True)
+        print('Updated to ' + commit, flush=True)
+    finally:
+        if args.restart:
+            flags = subprocess.CREATE_NO_WINDOW if os.name == 'nt' else 0
+            with (root / 'logs' / 'restart.log').open('a', encoding='utf-8') as stream:
+                subprocess.Popen([sys.executable, str(root / 'app.py')], cwd=root,
+                                 stdin=subprocess.DEVNULL, stdout=stream, stderr=stream,
+                                 creationflags=flags)
+
+if __name__ == '__main__':
+    main()

@@ -322,7 +322,8 @@ def build_demo():
                 refresh = gr.Button('Check model files',variant='secondary')
                 gr.Markdown('The installer downloads the models. Existing Headliner models can be reused by setting model paths in `local_settings.json`; the original app is never modified.')
                 check = gr.Button('Check for updates',variant='secondary')
-                update_notice = gr.Markdown('Updates use Codeberg first, then GitHub, then the Google Drive source backup. Close the app and run **UPDATE.bat** to install an update.')
+                install_update = gr.Button('Update and restart', variant='primary')
+                update_notice = gr.Markdown('Check for new code, then update and restart here. Models, settings and videos are kept. Public phone links may change after restarting.')
                 gr.Markdown('### Use on your phone or another computer')
                 saved = read_settings()
                 names={'local':'This computer only','lan':'Local network','public':'Temporary public link'}
@@ -361,6 +362,21 @@ def build_demo():
             from update_app import check_update
             return check_update()
         check.click(check_updates,outputs=update_notice,queue=False)
+        def update_and_restart():
+            import threading
+            from update_app import start_restart
+            if not runtime.LOCK.acquire(blocking=False):
+                return 'Finish or stop the current generation before updating.'
+            try:
+                start_restart()
+            except Exception as error:
+                runtime.LOCK.release()
+                return f'Update could not start: {error}'
+            timer = threading.Timer(3, lambda: os._exit(0))
+            timer.daemon = True
+            timer.start()
+            return 'Updating and restarting. Reopen the local app when it starts. A public phone link may change. Details are saved in logs/update.log.'
+        install_update.click(update_and_restart, outputs=update_notice, queue=False)
         save.click(save_access,[access,username,password],network_notice,queue=False)
         form_controls=[reference,prompt,scope,width,height,start,duration,size,window,seed,shape]
         for control in [size,shape]:

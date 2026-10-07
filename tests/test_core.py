@@ -10,7 +10,7 @@ from pathlib import Path
 from PIL import Image
 sys.path.insert(0,str(Path(__file__).resolve().parents[1]))
 from media import canvas
-from update_app import safe_name,stage_archive
+from update_app import safe_name
 from app import fresh_state,draw_selection,signature
 from image_ops import composite_selection
 from runtime import stop_process_tree
@@ -170,22 +170,5 @@ class CoreTests(unittest.TestCase):
         self.assertFalse(approved)
         self.assertEqual(source.read_bytes(),before)
         self.assertNotEqual(overlay.tobytes(),Image.open(source).tobytes())
-
-    def test_archive_validation(self):
-        folder=Path(tempfile.mkdtemp(prefix='ggf-release-test-'))
-        contents={n:b'test' for n in ['app.py','VERSION','worker.py','requirements.txt','update_app.py']}
-        manifest={'files':{n:hashlib.sha256(data).hexdigest() for n,data in contents.items()}}
-        archive=folder/'source.zip'
-        with zipfile.ZipFile(archive,'w') as z:
-            for name,data in contents.items(): z.writestr('app/'+name,data)
-            z.writestr('app/release-manifest.json',json.dumps(manifest))
-        stage_archive(archive,folder/'stage')
-        self.assertEqual((folder/'stage/app.py').read_bytes(),b'test')
-        manifest['files']['../outside.py']='invalid'
-        bad=folder/'unsafe.zip'
-        with zipfile.ZipFile(bad,'w') as z:
-            for name,data in contents.items(): z.writestr('app/'+name,data)
-            z.writestr('app/release-manifest.json',json.dumps(manifest))
-        with self.assertRaises(ValueError): stage_archive(bad,folder/'rejected')
 
 if __name__=='__main__': unittest.main()

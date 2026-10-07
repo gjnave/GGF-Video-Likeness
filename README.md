@@ -54,11 +54,42 @@ Exact revisions, sizes and SHA-256 hashes are in `model_manifest.json`. The imag
 
 ## Manual source setup
 
-Create a Python 3.11 environment, install `torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0` from `https://download.pytorch.org/whl/cu130`, then install `requirements.txt`. Run `python download_models.py`, then `python app.py`.
+Install Git for Windows and Python 3.11 (64-bit). Open **Command Prompt** in the folder where you want the app, then run:
+
+```bat
+git clone https://codeberg.org/Cognibuild/Headliner-Animate.git
+cd Headliner-Animate
+py -3.11 -m venv .venv
+.venv\Scripts\python.exe -m pip install --upgrade pip
+.venv\Scripts\python.exe -m pip install torch==2.10.0 torchvision==0.25.0 torchaudio==2.10.0 --index-url https://download.pytorch.org/whl/cu130
+.venv\Scripts\python.exe -m pip install -r requirements.txt
+```
+
+If Codeberg is unavailable, use `git clone https://github.com/gjnave/Headliner-Animate.git` instead; the remaining commands are identical.
+
+Read `RELEASE-NOTICE.md` and the model terms before downloading models. If you are eligible to use them, download once and start:
+
+```bat
+.venv\Scripts\python.exe setup_models.py
+.venv\Scripts\python.exe app.py
+```
+
+On subsequent starts, only run `.venv\Scripts\python.exe app.py` from the app folder. No ComfyUI installation is needed.
 
 The local server starts at port 7862, automatically trying another port if occupied. Phone access is optional under Settings. Local access remains login-free even when the separate remote endpoint uses a password. Blank remote password explicitly disables login; anyone with the link can use the app. Public Gradio links are temporary.
 
-Updates preserve private files and model downloads. Source order: **Codeberg first → GitHub → Google Drive**. Keep a release's source archive and VERSION synchronized across all three. The Drive source backup must be set to public read access before it can serve as an anonymous installer fallback; private backup storage alone is not a working public mirror.
+## Updates
+
+Open **Settings → Check for updates**, then **Update and restart**. The app fetches ordinary Git source commits from Codeberg, falling back to GitHub, and restarts. There is no separately uploaded source ZIP. Models, settings and generated files are preserved; local source edits are not overwritten. Stop generation before updating. Temporary public phone links can change after a restart.
+
+To update manually with the app closed:
+
+```bat
+.venv\Scripts\python.exe update_app.py
+.venv\Scripts\python.exe app.py
+```
+
+The updater can also connect an older non-Git installation to the source repository, backing up existing app files first. Git must be installed. Update failures are recorded in `logs/update.log` for in-app updates. Google Drive is backup storage, not a Git update server. GitHub and Codeberg contain the same individual source files.
 
 ## Attribution and responsible use
 
