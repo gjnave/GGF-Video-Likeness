@@ -10,6 +10,7 @@ import html
 import time
 import runtime
 import workspace
+from server_controls import ServerControls, add_server_controls, register_servers
 from pathlib import Path
 import gradio as gr
 from PIL import Image, ImageDraw, ImageOps
@@ -20,6 +21,7 @@ from network_settings import (read_settings, save_settings, verify_login,
                               launch_access_servers, install_upload_disconnect_handling)
 
 VERSION = (ROOT/'VERSION').read_text().strip()
+SERVER_CONTROLS = ServerControls(lambda: [runtime.LOCK], lambda: None)
 REVISIONS = {}
 CSS = (ROOT/'style.css').read_text()
 SEEK_PLAYER = """(seconds) => {
@@ -317,6 +319,7 @@ def build_demo():
                     document.addEventListener('keydown',function exit(e){if(e.key==='Escape'){box.classList.remove('expanded-video');document.removeEventListener('keydown',exit);}});
                 }""")
             with gr.Tab('Settings',id='settings'):
+                add_server_controls(SERVER_CONTROLS)
                 gr.Markdown(f'### App and models\nBuild {VERSION} · app-local inference · no ComfyUI installation or server required')
                 models = gr.Textbox(label='Installed models',value=model_status,lines=9,interactive=False)
                 refresh = gr.Button('Check model files',variant='secondary')
@@ -400,4 +403,5 @@ if __name__ == '__main__':
         build_demo,mode=saved['mode'],preferred_port=int(os.environ.get('GGF_VIDEO_PORT','7862')),auth=auth,
         inbrowser='--no-browser' not in os.sys.argv,css=CSS,theme=gr.themes.Base(primary_hue='amber',neutral_hue='slate'),
         allowed_paths=[str(ROOT/'jobs')],show_error=True,footer_links=[])
+    register_servers(local, remote)
     local.block_thread()

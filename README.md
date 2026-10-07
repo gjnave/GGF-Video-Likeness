@@ -1,5 +1,10 @@
 # Floyd Headliner Animate
 
+Settings includes **Release models / free GPU memory** and **Stop server**.
+Release keeps the app and phone connection open; Animate already unloads each
+worker after its generation stage. Stop server asks for confirmation and requires
+restarting RUN.bat on the local PC. Finish or cancel active generation first.
+
 **A new look. The same performance.** A purpose-built Get Going Fast app in the Floyd Headliner family.
 
 ## Get going fast
