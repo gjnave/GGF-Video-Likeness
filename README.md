@@ -80,7 +80,7 @@ The local server starts at port 7862, automatically trying another port if occup
 
 ## Updates
 
-Open **Settings → Check for updates**, then **Update and restart**. The app fetches ordinary Git source commits from Codeberg, falling back to GitHub, and restarts. There is no separately uploaded source ZIP. Models, settings and generated files are preserved; local source edits are not overwritten. Stop generation before updating. Temporary public phone links can change after a restart.
+Open **Settings → Check for updates**, then **Update and restart**. Following original Headliner, the app downloads the hosting service's automatically generated archive of the current repository code, using Codeberg first and GitHub as fallback. Nobody rebuilds or uploads a source ZIP. Models, settings and generated files are preserved; replaced source is backed up. Stop generation before updating. Temporary public phone links can change after a restart.
 
 To update manually with the app closed:
 
@@ -89,7 +89,7 @@ To update manually with the app closed:
 .venv\Scripts\python.exe app.py
 ```
 
-The updater can also connect an older non-Git installation to the source repository, backing up existing app files first. Git must be installed. Update failures are recorded in `logs/update.log` for in-app updates. Google Drive is backup storage, not a Git update server. GitHub and Codeberg contain the same individual source files.
+Updates work with both ZIP installations and cloned repositories. Git is not required for app updates. Checks compare repository revisions, so changes can be detected even without a VERSION bump. In-app update failures are recorded in `logs/update.log`. Google Drive is backup storage; current app source comes from Codeberg or GitHub.
 
 ## Attribution and responsible use
 

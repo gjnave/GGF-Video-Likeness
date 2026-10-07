@@ -1,44 +1,58 @@
+import io
+import json
+from pathlib import Path
 import tempfile
 import unittest
-from pathlib import Path
 from unittest.mock import patch
+import zipfile
 import update_app as updater
 
+class RepositoryUpdates(unittest.TestCase):
+    def make_archive(self,cfg,extra=None):
+        data=io.BytesIO()
+        with zipfile.ZipFile(data,'w') as z:
+            for name in cfg['required']:
+                value=json.dumps(cfg) if name=='release_sources.json' else 'new source'
+                z.writestr('app/'+name,value)
+            for name,value in (extra or {}).items():
+                z.writestr('app/'+name,value)
+        return data.getvalue()
 
-class GitUpdates(unittest.TestCase):
-    def test_clone_update_fallback_and_local_changes(self):
-        # Retain the isolated test directory for inspection; no user files removed.
-        base = Path(tempfile.mkdtemp(prefix='headliner-update-test-'))
-        source = base / 'source'
-        source.mkdir()
-        updater.git(source, 'init', '-b', 'main')
-        updater.git(source, 'config', 'user.email', 'test@example.invalid')
-        updater.git(source, 'config', 'user.name', 'Update test')
-        for name in ['app.py', 'worker.py', 'requirements.txt', 'update_app.py']:
-            (source / name).write_text('original')
-        (source / '.gitignore').write_text('models/\nlocal_settings.json\n')
-        updater.git(source, 'add', '.')
-        updater.git(source, 'commit', '-m', 'initial')
-        installed = base / 'installed'
-        installed.mkdir()
-        (installed / 'models').mkdir()
-        (installed / 'models' / 'keep').write_text('model')
-        (installed / 'local_settings.json').write_text('private')
-        mirrors = [('Unavailable', str(base / 'missing')), ('Fallback', str(source))]
-        with patch.object(updater, 'MIRRORS', mirrors):
-            updater.update(installed)
-            self.assertIn('up to date', updater.check_update(installed))
-            (source / 'app.py').write_text('new')
-            updater.git(source, 'commit', '-am', 'new release')
-            self.assertIn('available', updater.check_update(installed))
-            updater.update(installed)
-            self.assertEqual((installed / 'app.py').read_text(), 'new')
-            self.assertEqual((installed / 'models' / 'keep').read_text(), 'model')
-            self.assertEqual((installed / 'local_settings.json').read_text(), 'private')
-            (installed / 'app.py').write_text('my edits')
-            with self.assertRaisesRegex(RuntimeError, 'Local source changes'):
-                updater.update(installed)
-            self.assertEqual((installed / 'app.py').read_text(), 'my edits')
+    def test_revision_without_version_bump_fallback_backup_and_private_preservation(self):
+        root=Path(tempfile.mkdtemp(prefix='ggf-update-check-'))
+        cfg={'mirrors':[{'name':'Codeberg','api':'bad','archive':'https://bad.invalid/{revision}'},
+                        {'name':'GitHub','api':'good','archive':'https://good.invalid/{revision}'}],
+             'required':['app.py','update_app.py','release_sources.json','VERSION','requirements.txt']}
+        (root/'release_sources.json').write_text(json.dumps(cfg))
+        (root/'app.py').write_text('old source')
+        (root/'models').mkdir()
+        (root/'models/keep').write_text('weights')
+        (root/'network_settings.json').write_text('private')
+        (root/updater.MARKER).write_text(json.dumps({'revision':'a'*40}))
+        payload=self.make_archive(cfg,{'vendor/comfy_core/comfy/ldm/models/code.py':'code'})
+        def latest(source):
+            if source['name']=='Codeberg': raise OSError('unavailable')
+            return 'b'*40
+        with patch.object(updater,'latest',side_effect=latest),patch.object(updater,'urlopen',return_value=io.BytesIO(payload)):
+            self.assertIn('Update available',updater.check_update(root))
+            updater.update(root)
+        self.assertEqual((root/'app.py').read_text(),'new source')
+        self.assertEqual((root/'models/keep').read_text(),'weights')
+        self.assertEqual((root/'network_settings.json').read_text(),'private')
+        self.assertTrue(any(p.read_text()=='old source' for p in (root.parent/'app-backups').glob('*/app.py')))
+        with patch.object(updater,'latest',side_effect=latest):
+            self.assertIn('Up to date',updater.check_update(root))
 
-if __name__ == '__main__':
+    def test_invalid_archive_cannot_write_protected_paths(self):
+        root=Path(tempfile.mkdtemp(prefix='ggf-invalid-update-'))
+        cfg={'required':['app.py','update_app.py','release_sources.json']}
+        for bad in ['../outside.py','network_settings.json','models/weights','C:/outside.py']:
+            archive=root/(str(abs(hash(bad)))+'.zip')
+            archive.write_bytes(self.make_archive(cfg,{bad:'bad'}))
+            stage=root/(str(abs(hash(bad)))+'-stage')
+            with self.assertRaises(ValueError):
+                updater.stage_archive(archive,stage,cfg['required'])
+            self.assertFalse(stage.exists())
+
+if __name__=='__main__':
     unittest.main()

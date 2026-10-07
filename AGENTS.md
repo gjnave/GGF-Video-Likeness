@@ -12,7 +12,7 @@
 - Public source excludes models, personal media, jobs, logs, network settings, local paths, environments, BAT installers and installer ZIPs.
 - Publish individual source files to Codeberg Cognibuild/Headliner-Animate (primary) and GitHub gjnave/Headliner-Animate. Push the same commit to both. Drive Software/GGF-Video-Likeness is backup storage, not a Git update server.
 - Keep the existing Drive source file ID: update its contents rather than uploading a replacement file with a new ID.
-- Updates use Git fetch plus fast-forward, not a manually uploaded source ZIP. Never reintroduce the archive-only Codeberg repository. Keep VERSION synchronized and report failed mirrors explicitly.
+- Follow original Headliner: download automatically generated repository archives from Codeberg, then GitHub. Check commit revisions. No manually maintained source ZIP, hash-manifest prerequisite or customer Git requirement. Keep VERSION synchronized and report failed mirrors explicitly.
 - Installer/update scripts live in the parent directory, not the public source repository. Use CMD, not PowerShell.
 - Back up source before updates. Never replace/delete models, jobs, local configuration, or the environment.
 - Keep all upstream licenses and attribution. Do not portray Viggle or ComfyUI as original GGF research.
