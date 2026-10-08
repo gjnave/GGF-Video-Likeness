@@ -3,7 +3,8 @@
 .installed-revision.json
 __pycache__/
 *.pyc
-models/
+# Ignore downloaded weights only, not vendored Python source named models.
+/models/
 outputs/
 jobs/
 logs/
